@@ -43,8 +43,13 @@ import {
 } from 'term.js';
 
 import {
-  startNewKernel, Contents
+  Contents
 } from './contents';
+
+import {
+  startNewKernel
+} from '../jupyter-js-services/index';
+
 
 import {
   ActionHandler

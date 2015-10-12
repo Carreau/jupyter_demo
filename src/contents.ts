@@ -3,7 +3,7 @@
 //
 "use strict";
 import $ = require('jquery');
-import utils = require('./utils');
+import utils = require('../jupyter-js-services/utils');
 //import dialog = require('base/js/dialog');
 import gapiutils = require('./gapiutils');
 import driveutils = require('./driveutils');
