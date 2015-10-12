@@ -59,6 +59,26 @@ function urlPathJoin() {
     return url;
 }
 exports.urlPathJoin = urlPathJoin;
+
+
+/**
+ * Like os.path.split for URLs.
+ * Always returns two strings, the directory path and the base filename
+ */
+var urlPathSplit = function (path) {
+    
+    var idx = path.lastIndexOf('/');
+    if (idx === -1) {
+        return ['', path];
+    } else {
+        return [ path.slice(0, idx), path.slice(idx + 1) ];
+    }
+ };
+
+exports.urlPathSplit = urlPathSplit;
+
+
+
 /**
  * Encode just the components of a multi-segment uri,
  * leaving '/' separators.
@@ -165,3 +185,39 @@ var PromiseDelegate = (function () {
 })();
 exports.PromiseDelegate = PromiseDelegate;
 //# sourceMappingURL=utils.js.map
+
+
+/**
+ * Wraps an AJAX error as an Error object.
+ */
+var wrap_ajax_error = function (jqXHR, status, error) {
+    var wrapped_error = new Error(ajax_error_msg(jqXHR));
+    wrapped_error.name =  XHR_ERROR;
+    // provide xhr response
+    wrapped_error.xhr = jqXHR;
+    wrapped_error.xhr_status = status;
+    wrapped_error.xhr_error = error;
+    return wrapped_error;
+};
+
+exports.wrap_ajax_error = wrap_ajax_error;
+
+var promising_ajax = function(url, settings) {
+    /**
+     * Like $.ajax, but returning an ES6 promise. success and error settings
+     * will be ignored.
+     */
+    settings = settings || {};
+    return new Promise(function(resolve, reject) {
+        settings.success = function(data, status, jqXHR) {
+            resolve(data);
+        };
+        settings.error = function(jqXHR, status, error) {
+            log_ajax_error(jqXHR, status, error);
+            reject(wrap_ajax_error(jqXHR, status, error));
+        };
+        $.ajax(url, settings);
+    });
+};
+
+exports.wrap_ajax_error = wrap_ajax_error;

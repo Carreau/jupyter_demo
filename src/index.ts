@@ -258,7 +258,7 @@ class FileBrowser extends Widget {
         var path = this._currentDir + (<HTMLElement>event.target).textContent;
         this._contents.get(path, { type: "file" }).then(msg => {
           var onClick = this._onClick;
-          if (onClick) onClick(msg.path, msg.content);
+          if (onClick) onClick(<any>msg.path, <any>msg.content);
         });
       }
     }

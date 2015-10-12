@@ -12,6 +12,7 @@ export declare function uuid(): string;
  * Join a sequence of url components with '/'.
  */
 export declare function urlPathJoin(...paths: string[]): string;
+export declare function urlPathSplit(path: string): string[];
 /**
  * Encode just the components of a multi-segment uri,
  * leaving '/' separators.
@@ -59,6 +60,8 @@ export interface IAjaxError {
  * http://www.html5rocks.com/en/tutorials/es6/promises/#toc-promisifying-xmlhttprequest
  */
 export declare function ajaxRequest(url: string, settings: IAjaxSettings): Promise<any>;
+export declare function wrap_ajax_error(a:any, b:any):any;
+export declare function promising_ajax(a:any, b:any):any;
 /**
  * A Promise that can be resolved or rejected by another object.
  */
