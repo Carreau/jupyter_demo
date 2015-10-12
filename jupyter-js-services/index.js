@@ -5,7 +5,7 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 __export(require('./config'));
-__export(require('./contents'));
+//__export(require('./contents'));
 __export(require('./ikernel'));
 __export(require('./isession'));
 __export(require('./kernel'));

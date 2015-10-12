@@ -44,7 +44,7 @@ import {
 
 import {
   startNewKernel, Contents
-} from '../jupyter-js-services/index';
+} from './contents';
 
 import {
   ActionHandler
