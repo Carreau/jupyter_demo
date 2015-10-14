@@ -15,10 +15,11 @@ class MainPageHandler(tornado.web.RequestHandler):
     def get(self):
         return self.render("index.html", static=self.static_url)
 
+PORT = 8890
 
 def main(argv):
 
-    url = "http://localhost:8765"
+    url = "http://localhost:%s" % PORT
 
     handlers = [
         (r"/", MainPageHandler),
@@ -49,9 +50,9 @@ def main(argv):
     app = tornado.web.Application(handlers, static_path='build',
                                   template_path='.')
 
-    app.listen(8765, 'localhost')
+    app.listen(PORT, 'localhost')
     loop = tornado.ioloop.IOLoop.instance()
-    print('Browse to http://localhost:8765')
+    print('Browse to http://localhost:%s' %  PORT)
     #loop.add_callback(webbrowser.open, url)
     try:
         loop.start()

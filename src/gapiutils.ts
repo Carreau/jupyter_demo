@@ -183,7 +183,7 @@ var load_gapi_2 = function(d):Promise<any> {
  *     trying to authorize without a popup.
  */
 var authorize = function(opt_withPopup:boolean, conf:any):Promise<any> {
-    var config = $.extend({}, default_config, (conf.data||{})['gdrive']);
+    var config = $.extend({}, default_config, ((conf||{}).data||{})['gdrive']);
     var scope = [];
     if(config.FILE_SCOPE){
       scope.push(FILES_OAUTH_SCOPE)

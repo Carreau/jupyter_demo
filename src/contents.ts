@@ -150,10 +150,10 @@ export class GoogleDriveContents  {
          */
         this._last_observed_revision = {};
         var that = this;
-        this._config.loaded.then((data) => {
+        //this._config.loaded.then((data) => {
           gapiutils.config(this._config);
           gapiutils.gapi_ready.then(driveutils.set_user_info);
-        })
+        //})
 
     }
 
