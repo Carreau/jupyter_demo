@@ -36,7 +36,7 @@ export enum FileType {FILE=1, FOLDER=2}
  * @return A promise fullfilled by either the files resource for the given
  *     file/folder, or rejected with an Error object.
  */
-export var get_resource_for_relative_path = function(path_component:String, type:FileType, opt_child_resource:Boolean, folder_id:String): Promise<any> {
+export var getResourceForRelativePath = function(path_component:String, type:FileType, opt_child_resource:Boolean, folder_id:String): Promise<any> {
         var query = 'title = \'' + path_component + '\' and trashed = false ';
         if (type == FileType.FOLDER) {
             query += ' and mimeType = \'' + FOLDER_MIME_TYPE + '\'';
@@ -69,7 +69,7 @@ export var get_resource_for_relative_path = function(path_component:String, type
 /**
  * Split a path into path components
  */
-export var split_path = function(path:String):String[] {
+export var splitPath = function(path:String):String[] {
     return path.split('/').filter((s,i,a) => (Boolean(s)));
 };
 
@@ -85,8 +85,8 @@ export var split_path = function(path:String):String[] {
  * @return {Promise} fullfilled with file/folder id (string) on success
  *     or Error object on error.
  */
-export var get_resource_for_path = function(path:String, type?) {
-        var components = split_path(path);
+export var getResourceForPath = function(path:String, type?) {
+        var components = splitPath(path);
         if (components.length == 0) {
             return gapiutils.execute(gapi.client.drive.about.get())
             .then(function(resource) {
@@ -104,7 +104,7 @@ export var get_resource_for_path = function(path:String, type?) {
             // between Promises
             result = ((component:String, t:FileType, child_resource:Boolean, result) => {
               return result.then((data) => {
-                  return get_resource_for_relative_path(component, t, child_resource, data['id'])
+                  return getResourceForRelativePath(component, t, child_resource, data['id'])
                   }
               );
             })(component, t, child_resource, result)
@@ -124,12 +124,12 @@ export var get_resource_for_path = function(path:String, type?) {
  * @return {Promise} fullfilled with folder id (string) on success
  *     or Error object on error.
  */
-export var get_id_for_path = function(path, type?) {
-        var components = split_path(path);
+export var getIdForPath = function(path, type?) {
+        var components = splitPath(path);
         if (components.length == 0) {
             return $.Deferred().resolve('root');
         }
-        return get_resource_for_path(path, type)
+        return getResourceForPath(path, type)
             .then(function(resource) { return resource['id']; });
     }
 
@@ -139,7 +139,7 @@ export var get_id_for_path = function(path, type?) {
  * folder.  This is the next file in the series Untitled0, Untitled1, ... in
  * the given drive folder.  As a fallback, returns Untitled.
  *
- * @method get_new_filename
+ * @method getNewFileName
  * @param {function(string)} callback Called with the name for the new file.
  * @param {string} opt_folderId optinal Drive folder Id to search for
  *     filenames.  Uses root, if none is specified.
@@ -148,7 +148,7 @@ export var get_id_for_path = function(path, type?) {
  * @return A promise fullfilled with the new filename.  In case of errors,
  *     'Untitled.ipynb' is used as a fallback.
  */
-export var get_new_filename = function(opt_folderId, ext, base_name) {
+export var getNewFileName = function(opt_folderId, ext, base_name) {
     /** @type {string} */
     var folderId = opt_folderId || 'root';
 
@@ -194,7 +194,7 @@ export var get_new_filename = function(opt_folderId, ext, base_name) {
  * Uploads a notebook to Drive, either creating a new one or saving an
  * existing one.
  *
- * @method upload_to_drive
+ * @method uploadToDrive
  * @param {string} data The file contents as a string
  * @param {Object} metadata File metadata
  * @param {string=} opt_fileId file Id.  If false, a new file is created.
@@ -203,7 +203,7 @@ export var get_new_filename = function(opt_folderId, ext, base_name) {
  * @return {Promise} A promise resolved with the Google Drive Files
  *     resource for the uploaded file, or rejected with an Error object.
  */
-export var upload_to_drive = function(data, metadata:{mimeType:String}, opt_fileId?, opt_params?: any) {
+export var uploadToDrive = function(data:String, metadata:{mimeType:String}, opt_fileId?:String, opt_params?: Object) {
     var params:Object = opt_params || {};
     var delimiter = '\r\n--' + MULTIPART_BOUNDARY + '\r\n';
     var close_delim = '\r\n--' + MULTIPART_BOUNDARY + '--';
@@ -262,9 +262,38 @@ export var GET_CONTENTS_EXPONENTIAL_BACKOFF_FACTOR = 2.0;
  *     Should be set when already_picked is true.
  * @return {Promise} A promise fullfilled by file contents.
  */
-export var get_contents = function(resource, already_picked:boolean, opt_num_tries?) {
+export var getContents = function(resource, already_picked:boolean, opt_num_tries?, data?) {
     if (resource['downloadUrl']) {
-        return gapiutils.download(resource['downloadUrl']);
+      var _h = {resolve:null, reject:null};
+      var real_time_model = new Promise(function(resolve, reject){
+        _h.resolve = resolve;
+        _h.reject = reject;
+      })
+      gapi.drive.realtime.load(resource['id'], function(doc){
+        console.log("[driveutils] RT load resource['id'] promise fullfilled")
+        var model = doc.getModel();
+        var root = model.getRoot();
+
+        var metadata = root.get('metadata')
+        if ( metadata === null ){
+          console.info('[driveutils.ts] no metadata, populating with default')
+          root.set('metadata', model.createMap())
+        }
+        if( root.get('nbformat_minor') === null){
+            root.set('nbformat_minor', 0)
+        }
+        if( root.get('nbformat_minor') === null){
+            root.set('nbformat', 4)
+        }
+        if (root.get('cells') === null) {
+            root.set('cells', model.createList())
+        }
+        console.log("[driveutils] will resolve _h to thing")
+        return _h.resolve(new RTNotebook(root, model, data))
+      })
+      console.warn("[driveutils] will return ", real_time_model);
+      return real_time_model;
+      //return  gapiutils.download(resource['downloadUrl']);
     } else if (already_picked) {
         if (opt_num_tries == 0) {
           return Promise.reject(new Error('Max retries of file load reached'));
@@ -279,7 +308,7 @@ export var get_contents = function(resource, already_picked:boolean, opt_num_tri
             }, delay);
         });
         return delayed_reply.then(function(new_resource) {
-            return get_contents(new_resource, true, opt_num_tries - 1);
+            return getContents(new_resource, true, opt_num_tries - 1);
         });
     } else {
         // If downloadUrl field is missing, this means that we do not have
@@ -289,7 +318,7 @@ export var get_contents = function(resource, already_picked:boolean, opt_num_tri
         // app.
         return pickerutils.pick_file(resource.parents[0]['id'], resource['title'])
             .then(function() {
-              return get_contents(resource, true, GET_CONTENTS_MAX_TRIES);
+              return getContents(resource, true, GET_CONTENTS_MAX_TRIES);
             });
     }
 };
@@ -301,7 +330,7 @@ export var get_contents = function(resource, already_picked:boolean, opt_num_tri
  *
  *
  **/
-export var set_user_info = function(selector:string):Promise<any>{
+export var setUserInfo = function(selector:string):Promise<any>{
     selector = selector || '#header-container';
     var request = gapi.client.drive.about.get()
     return gapiutils.execute(request).then(function(result){
