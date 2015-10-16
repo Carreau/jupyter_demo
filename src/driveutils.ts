@@ -289,7 +289,8 @@ export var getContents = function(resource, already_picked:boolean, opt_num_trie
             root.set('cells', model.createList())
         }
         console.log("[driveutils] will resolve _h to thing")
-        return _h.resolve(new RTNotebook(root, model, data))
+        //return _h.resolve(new RTNotebook(root, model, data))
+        return _h.resolve({root:root, model:model, data:data})
       })
       console.warn("[driveutils] will return ", real_time_model);
       return real_time_model;

@@ -152,7 +152,7 @@ export class GoogleDriveContents  {
         var that = this;
         //this._config.loaded.then((data) => {
           gapiutils.config(this._config);
-          gapiutils.gapi_ready.then(driveutils.set_user_info);
+          gapiutils.gapi_ready.then(driveutils.setUserInfo);
         //})
 
     }
@@ -193,7 +193,7 @@ export class GoogleDriveContents  {
         var converted = contents_model_to_metadata_and_bytes(model);
         var contents = converted[1];
         var save = function() {
-            return driveutils.upload_to_drive(contents, undefined, resource['id']);
+            return driveutils.uploadToDrive(contents, undefined, resource['id']);
         };
         if (resource['headRevisionId'] !=
             that._last_observed_revision[resource['id']]) {
@@ -247,7 +247,7 @@ export class GoogleDriveContents  {
         if (model['type'] === 'directory') {
             return gapiutils.execute(gapi.client.drive.files.insert({'resource': metadata}));
         } else {
-            return driveutils.upload_to_drive(contents, metadata);
+            return driveutils.uploadToDrive(contents, metadata);
         }
     }
 
@@ -257,10 +257,10 @@ export class GoogleDriveContents  {
     get(path:String, options:any) {
         var that = this;
         var metadata_prm = gapiutils.gapi_ready.then(
-            $.proxy(driveutils.get_resource_for_path, this, path, driveutils.FileType.FILE));
+            $.proxy(driveutils.getResourceForPath, this, path, driveutils.FileType.FILE));
         var contents_prm = metadata_prm.then(function(resource) {
             that._observe_file_resource(resource);
-            return driveutils.get_contents(resource, false);
+            return driveutils.getContents(resource, false);
         });
 
         return Promise.all([metadata_prm, contents_prm]).then(function(values) {
@@ -315,9 +315,9 @@ export class GoogleDriveContents  {
         }
 
         var folder_id_prm = gapiutils.gapi_ready
-            .then($.proxy(driveutils.get_id_for_path, this, path, driveutils.FileType.FOLDER))
+            .then($.proxy(driveutils.getIdForPath, this, path, driveutils.FileType.FOLDER))
         var filename_prm = folder_id_prm.then(function(resource){
-            return driveutils.get_new_filename(resource, options['ext'] || default_ext, base_name);
+            return driveutils.getNewFileName(resource, options['ext'] || default_ext, base_name);
         });
         return Promise.all([folder_id_prm, filename_prm]).then((values) => {
             var folder_id = values[0];
@@ -334,7 +334,7 @@ export class GoogleDriveContents  {
     delete(path:String) {
         return gapiutils.gapi_ready
         .then(function() {
-            return driveutils.get_id_for_path(path, driveutils.FileType.FILE);
+            return driveutils.getIdForPath(path, driveutils.FileType.FILE);
         })
         .then(function(file_id){
             return gapiutils.execute(gapi.client.drive.files.delete({'fileId': file_id}));
@@ -345,8 +345,8 @@ export class GoogleDriveContents  {
         var that = this;
         // Rename is only possible when path and new_path differ except in
         // their last component, so check this first.
-        var path_components = driveutils.split_path(path);
-        var new_path_components = driveutils.split_path(new_path);
+        var path_components = driveutils.splitPath(path);
+        var new_path_components = driveutils.splitPath(new_path);
 
         var base_path = [];
         var name:String;
@@ -370,7 +370,7 @@ export class GoogleDriveContents  {
 
         return gapiutils.gapi_ready
         .then(function() {
-            return driveutils.get_id_for_path(path)
+            return driveutils.getIdForPath(path)
         })
         .then(function(file_id) {
             var body = {'title': new_name};
@@ -396,9 +396,9 @@ export class GoogleDriveContents  {
         var path_and_filename = <String[]>utils.urlPathSplit(<string>path);
         var path = path_and_filename[0];
         var filename = path_and_filename[1];
-        return driveutils.get_resource_for_path(<string>path, driveutils.FileType.FOLDER)
+        return driveutils.getResourceForPath(<string>path, driveutils.FileType.FOLDER)
         .then(function(folder_resource) {
-            return driveutils.get_resource_for_relative_path(filename, driveutils.FileType.FILE, false, folder_resource['id'])
+            return driveutils.getResourceForRelativePath(filename, driveutils.FileType.FILE, false, folder_resource['id'])
             .then(function(file_resource) {
                 return that._save_existing(file_resource, model)
             }, function(error) {
@@ -431,7 +431,7 @@ export class GoogleDriveContents  {
     createCheckpoint(path:String, options:any) {
         var that = this;
         return gapiutils.gapi_ready
-        .then($.proxy(driveutils.get_id_for_path, this, path, driveutils.FileType.FILE))
+        .then($.proxy(driveutils.getIdForPath, this, path, driveutils.FileType.FILE))
         .then(function(file_id) {
             var revision_id = that._last_observed_revision[file_id];
             if (!revision_id) {
@@ -456,7 +456,7 @@ export class GoogleDriveContents  {
 
     restoreCheckpoint(path:String, checkpoint_id:CheckpointId, options) {
         var file_id_prm = gapiutils.gapi_ready
-        .then($.proxy(driveutils.get_id_for_path, this, path, driveutils.FileType.FILE))
+        .then($.proxy(driveutils.getIdForPath, this, path, driveutils.FileType.FILE))
 
         var contents_prm = file_id_prm.then(function(file_id) {
             var request = gapi.client.drive.revisions.get({
@@ -473,13 +473,13 @@ export class GoogleDriveContents  {
         .then(function(values) {
             var file_id = values[0];
             var contents = values[1];
-            return driveutils.upload_to_drive(contents, undefined, file_id);
+            return driveutils.uploadToDrive(contents, undefined, file_id);
         });
     }
 
     listCheckpoints(path:String, options:any) {
         return gapiutils.gapi_ready
-        .then($.proxy(driveutils.get_id_for_path, this, path, driveutils.FileType.FILE))
+        .then($.proxy(driveutils.getIdForPath, this, path, driveutils.FileType.FILE))
         .then(function(file_id) {
             var request = gapi.client.drive.revisions.list({'fileId': file_id });
             return gapiutils.execute(request);
@@ -517,7 +517,7 @@ export class GoogleDriveContents  {
     listContents(path:String):Promise<any>{
         var that = this;
         return gapiutils.gapi_ready
-        .then($.proxy(driveutils.get_id_for_path, this, path, driveutils.FileType.FOLDER))
+        .then($.proxy(driveutils.getIdForPath, this, path, driveutils.FileType.FOLDER))
         .then(function(folder_id) {
             // Gets contents of the folder 1000 items at a time.  Google Drive
             // returns at most 1000 items in each call to drive.files.list.
