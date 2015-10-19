@@ -1,6 +1,9 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 'use strict';
+/**
+ * Enumeration of valid Kernel status states.
+ */
 (function (KernelStatus) {
     KernelStatus[KernelStatus["Unknown"] = 0] = "Unknown";
     KernelStatus[KernelStatus["Starting"] = 1] = "Starting";

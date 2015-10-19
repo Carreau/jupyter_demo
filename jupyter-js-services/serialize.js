@@ -3,6 +3,9 @@
 'use strict';
 /**
  * Deserialize and return the unpacked message.
+ *
+ * #### Notes
+ * Handles JSON blob strings and binary messages.
  */
 function deserialize(data) {
     var value;
@@ -17,6 +20,10 @@ function deserialize(data) {
 exports.deserialize = deserialize;
 /**
  * Serialize a kernel message for transport.
+ *
+ * #### Notes
+ * If there is binary content, an `ArrayBuffer` is returned,
+ * otherwise the message is converted to a JSON string.
  */
 function serialize(msg) {
     var value;
@@ -56,6 +63,7 @@ function deserializeBinary(buf) {
 }
 /**
  * Implement the binary serialization protocol.
+ *
  * Serialize Kernel message to ArrayBuffer.
  */
 function serializeBinary(msg) {
@@ -91,7 +99,7 @@ function serializeBinary(msg) {
     return msg_buf.buffer;
 }
 /**
- * Filter "buffers" key for JSON.stringify
+ * Filter `"buffers"` key for `JSON.stringify`.
  */
 function replace_buffers(key, value) {
     if (key === "buffers") {

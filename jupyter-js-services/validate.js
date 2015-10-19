@@ -1,8 +1,17 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 'use strict';
+/**
+ * Required fields for comm messages.
+ */
 var COMM_FIELDS = ['comm_id', 'data'];
+/**
+ * Required fields for `IKernelHeader`.
+ */
 var HEADER_FIELDS = ['username', 'version', 'session', 'msg_id', 'msg_type'];
+/**
+ * Required fields for `IKernelMessage`.
+ */
 var MESSAGE_FIELDS = ['header', 'parent_header', 'metadata', 'content',
     'channel', 'buffers'];
 /**
@@ -34,6 +43,9 @@ function validateCommMessage(msg) {
     return true;
 }
 exports.validateCommMessage = validateCommMessage;
+/**
+ * Validate the header of an `IKernelMessage`.
+ */
 function validateKernelHeader(header) {
     for (var i = 0; i < HEADER_FIELDS.length; i++) {
         if (!header.hasOwnProperty(HEADER_FIELDS[i])) {
@@ -45,7 +57,7 @@ function validateKernelHeader(header) {
     }
 }
 /**
- * Validate an object as being of IKernelMessage type.
+ * Validate an `IKernelMessage` object.
  */
 function validateKernelMessage(msg) {
     for (var i = 0; i < MESSAGE_FIELDS.length; i++) {
@@ -66,7 +78,7 @@ function validateKernelMessage(msg) {
 }
 exports.validateKernelMessage = validateKernelMessage;
 /**
- * Validate an object as being of IKernelID type
+ * Validate an `KernelId` object.
  */
 function validateKernelId(info) {
     if (!info.hasOwnProperty('name') || !info.hasOwnProperty('id')) {
@@ -78,7 +90,7 @@ function validateKernelId(info) {
 }
 exports.validateKernelId = validateKernelId;
 /**
- * Validate an object as being of ISessionId type.
+ * Validate an `ISessionId` object.
  */
 function validateSessionId(info) {
     if (!info.hasOwnProperty('id') ||
@@ -94,7 +106,7 @@ function validateSessionId(info) {
 }
 exports.validateSessionId = validateSessionId;
 /**
- * Validate an object as being of INotebookId type.
+ * Validate an `INotebookId` object.
  */
 function validateNotebookId(model) {
     if ((!model.hasOwnProperty('path')) || (typeof model.path !== 'string')) {
@@ -103,7 +115,7 @@ function validateNotebookId(model) {
 }
 exports.validateNotebookId = validateNotebookId;
 /**
- * Validate an object as being of IKernelSpecID type.
+ * Validate an `IKernelSpecID` object.
  */
 function validateKernelSpec(info) {
     var err = new Error("Invalid KernelSpec Model");
@@ -126,4 +138,50 @@ function validateKernelSpec(info) {
     }
 }
 exports.validateKernelSpec = validateKernelSpec;
+/**
+ * Validate an `IContentsModel` object.
+ */
+function validateContentsModel(model) {
+    var err = new Error('Invalid Contents Model');
+    if (!model.hasOwnProperty('name') || typeof model.name !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('path') || typeof model.path !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('type') || typeof model.type !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('created') || typeof model.created !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('last_modified') ||
+        typeof model.last_modified !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('mimetype')) {
+        throw err;
+    }
+    if (!model.hasOwnProperty('content')) {
+        throw err;
+    }
+    if (!model.hasOwnProperty('format')) {
+        throw err;
+    }
+}
+exports.validateContentsModel = validateContentsModel;
+/**
+ * Validate an `ICheckpointModel` object.
+ */
+function validateCheckpointModel(model) {
+    var err = new Error('Invalid Checkpoint Model');
+    if (!model.hasOwnProperty('id') || typeof model.id !== 'string') {
+        throw err;
+    }
+    if (!model.hasOwnProperty('last_modified') ||
+        typeof model.last_modified !== 'string') {
+        throw err;
+    }
+}
+exports.validateCheckpointModel = validateCheckpointModel;
 //# sourceMappingURL=validate.js.map

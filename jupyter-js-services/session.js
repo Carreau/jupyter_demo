@@ -11,14 +11,19 @@ var validate = require('./validate');
  */
 var SESSION_SERVICE_URL = 'api/sessions';
 /**
- * Fetch the running sessions via API: GET /sessions
+ * Fetch the running sessions.
+ *
+ * #### Notes
+ * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/sessions), and validates the response.
+ *
+ * The promise is fulfilled on a valid response and rejected otherwise.
  */
-function listRunningSessions(baseUrl) {
+function listRunningSessions(baseUrl, ajaxOptions) {
     var url = utils.urlPathJoin(baseUrl, SESSION_SERVICE_URL);
     return utils.ajaxRequest(url, {
         method: "GET",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 200) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -33,13 +38,18 @@ function listRunningSessions(baseUrl) {
 }
 exports.listRunningSessions = listRunningSessions;
 /**
- * Start a new session via API: POST /kernels
+ * Start a new session.
  *
+ * #### Notes
+ * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/sessions), and validates the response.
+ *
+ * The promise is fulfilled on a valid response and rejected otherwise.
+
  * Wrap the result in an NotebookSession object. The promise is fulfilled
  * when the session is fully ready to send the first message. If
  * the session fails to become ready, the promise is rejected.
  */
-function startNewSession(options) {
+function startNewSession(options, ajaxOptions) {
     var url = utils.urlPathJoin(options.baseUrl, SESSION_SERVICE_URL);
     var model = {
         kernel: { name: options.kernelName },
@@ -50,7 +60,7 @@ function startNewSession(options) {
         dataType: "json",
         data: JSON.stringify(model),
         contentType: 'application/json'
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 201) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -63,18 +73,20 @@ exports.startNewSession = startNewSession;
 /**
  * Connect to a running notebook session.
  *
+ * #### Notes
  * If the session was already started via `startNewSession`, the existing
  * NotebookSession object is used as the fulfillment value.
  *
  * Otherwise, if `options` are given, we attempt to connect to the existing
- * session.  The promise is fulfilled when the session is fully ready to send
+ * session found by calling `listRunningSessions`.
+ * The promise is fulfilled when the session is fully ready to send
  * the first message. If the session fails to become ready, the promise is
  * rejected.
  *
  * If the session was not already started and no `options` are given,
  * the promise is rejected.
  */
-function connectToSession(id, options) {
+function connectToSession(id, options, ajaxOptions) {
     var session = runningSessions.get(id);
     if (session) {
         return Promise.resolve(session);
@@ -83,7 +95,7 @@ function connectToSession(id, options) {
         return Promise.reject(new Error('Please specify session options'));
     }
     return new Promise(function (resolve, reject) {
-        listRunningSessions(options.baseUrl).then(function (sessionIds) {
+        listRunningSessions(options.baseUrl, ajaxOptions).then(function (sessionIds) {
             var sessionIds = sessionIds.filter(function (k) { return k.id === id; });
             if (!sessionIds.length) {
                 reject(new Error('No running session with id: ' + id));
@@ -100,7 +112,7 @@ exports.connectToSession = connectToSession;
  *
  * Fulfilled when the NotebookSession is Starting, or rejected if Dead.
  */
-function createSession(sessionId, options) {
+function createSession(sessionId, options, ajaxOptions) {
     return new Promise(function (resolve, reject) {
         options.notebookPath = sessionId.notebook.path;
         var kernelOptions = {
@@ -110,7 +122,7 @@ function createSession(sessionId, options) {
             username: options.username,
             clientId: options.clientId
         };
-        var kernelPromise = kernel_1.connectToKernel(sessionId.kernel.id, kernelOptions);
+        var kernelPromise = kernel_1.connectToKernel(sessionId.kernel.id, kernelOptions, ajaxOptions);
         kernelPromise.then(function (kernel) {
             var session = new NotebookSession(options, sessionId.id, kernel);
             runningSessions.set(session.id, session);
@@ -147,7 +159,7 @@ var NotebookSession = (function () {
     }
     Object.defineProperty(NotebookSession.prototype, "sessionDied", {
         /**
-         * Get the session died signal.
+         * A signal emitted when the session dies.
          */
         get: function () {
             return NotebookSession.sessionDiedSignal.bind(this);
@@ -158,6 +170,9 @@ var NotebookSession = (function () {
     Object.defineProperty(NotebookSession.prototype, "id", {
         /**
          * Get the session id.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._id;
@@ -168,7 +183,10 @@ var NotebookSession = (function () {
     Object.defineProperty(NotebookSession.prototype, "kernel", {
         /**
          * Get the session kernel object.
-        */
+         *
+         * #### Notes
+         * This is a read-only property.
+         */
         get: function () {
             return this._kernel;
         },
@@ -178,6 +196,9 @@ var NotebookSession = (function () {
     Object.defineProperty(NotebookSession.prototype, "notebookPath", {
         /**
          * Get the notebook path.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._notebookPath;
@@ -186,9 +207,15 @@ var NotebookSession = (function () {
         configurable: true
     });
     /**
-     * Rename the notebook.
+     * Rename or move a notebook.
+     *
+     * @param path - The new notebook path.
+     *
+     * #### Notes
+     * This uses the Notebook REST API, and the response is validated.
+     * The promise is fulfilled on a valid response and rejected otherwise.
      */
-    NotebookSession.prototype.renameNotebook = function (path) {
+    NotebookSession.prototype.renameNotebook = function (path, ajaxOptions) {
         var _this = this;
         if (this._isDead) {
             return Promise.reject(new Error('Session is dead'));
@@ -202,7 +229,7 @@ var NotebookSession = (function () {
             dataType: "json",
             data: JSON.stringify(model),
             contentType: 'application/json'
-        }).then(function (success) {
+        }, ajaxOptions).then(function (success) {
             if (success.xhr.status !== 200) {
                 throw Error('Invalid Status: ' + success.xhr.status);
             }
@@ -212,11 +239,14 @@ var NotebookSession = (function () {
         }, onSessionError);
     };
     /**
-     * DELETE /api/sessions/[:session_id]
-     *
      * Kill the kernel and shutdown the session.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/sessions), and validates the response.
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
      */
-    NotebookSession.prototype.shutdown = function () {
+    NotebookSession.prototype.shutdown = function (ajaxOptions) {
         var _this = this;
         if (this._isDead) {
             return Promise.reject(new Error('Session is dead'));
@@ -225,7 +255,7 @@ var NotebookSession = (function () {
         return utils.ajaxRequest(this._url, {
             method: "DELETE",
             dataType: "json"
-        }).then(function (success) {
+        }, ajaxOptions).then(function (success) {
             if (success.xhr.status !== 204) {
                 throw Error('Invalid Status: ' + success.xhr.status);
             }
@@ -249,6 +279,8 @@ var NotebookSession = (function () {
     };
     /**
      * A signal emitted when the session dies.
+     *
+     * **See also:** [[sessionDied]]
      */
     NotebookSession.sessionDiedSignal = new phosphor_signaling_1.Signal();
     return NotebookSession;

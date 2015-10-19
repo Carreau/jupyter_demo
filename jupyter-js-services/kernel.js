@@ -21,14 +21,19 @@ var KERNEL_SERVICE_URL = 'api/kernels';
  */
 var KERNELSPEC_SERVICE_URL = 'api/kernelspecs';
 /**
- * Fetch the kernel specs via API: GET /kernelspecs
+ * Fetch the kernel specs.
+ *
+ * #### Notes
+ * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernelspecs).
+ *
+ * The promise is fulfilled on a valid response and rejected otherwise.
  */
-function getKernelSpecs(baseUrl) {
+function getKernelSpecs(baseUrl, ajaxOptions) {
     var url = utils.urlPathJoin(baseUrl, KERNELSPEC_SERVICE_URL);
     return utils.ajaxRequest(url, {
         method: "GET",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         var err = new Error('Invalid KernelSpecs Model');
         if (success.xhr.status !== 200) {
             throw new Error('Invalid Response: ' + success.xhr.status);
@@ -54,14 +59,19 @@ function getKernelSpecs(baseUrl) {
 }
 exports.getKernelSpecs = getKernelSpecs;
 /**
- * Fetch the running kernels via API: GET /kernels
+ * Fetch the running kernels.
+ *
+ * #### Notes
+ * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernels) and validates the response model.
+ *
+ * The promise is fulfilled on a valid response and rejected otherwise.
  */
-function listRunningKernels(baseUrl) {
+function listRunningKernels(baseUrl, ajaxOptions) {
     var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL);
     return utils.ajaxRequest(url, {
         method: "GET",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 200) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -76,18 +86,21 @@ function listRunningKernels(baseUrl) {
 }
 exports.listRunningKernels = listRunningKernels;
 /**
- * Start a new kernel via API: POST /kernels
+ * Start a new kernel.
  *
- * Wrap the result in an Kernel object. The promise is fulfilled
+ * #### Notes
+ * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernels) and validates the response model.
+ *
+ * Wraps the result in an Kernel object. The promise is fulfilled
  * when the kernel is fully ready to send the first message. If
  * the kernel fails to become ready, the promise is rejected.
  */
-function startNewKernel(options) {
+function startNewKernel(options, ajaxOptions) {
     var url = utils.urlPathJoin(options.baseUrl, KERNEL_SERVICE_URL);
     return utils.ajaxRequest(url, {
         method: "POST",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 201) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -99,18 +112,20 @@ exports.startNewKernel = startNewKernel;
 /**
  * Connect to a running kernel.
  *
+ * #### Notes
  * If the kernel was already started via `startNewKernel`, the existing
  * Kernel object is used as the fulfillment value.
  *
  * Otherwise, if `options` are given, we attempt to connect to the existing
- * kernel.  The promise is fulfilled when the kernel is fully ready to send
+ * kernel found by calling `listRunningKernels`.
+ * The promise is fulfilled when the kernel is fully ready to send
  * the first message. If the kernel fails to become ready, the promise is
  * rejected.
  *
  * If the kernel was not already started and no `options` are given,
  * the promise is rejected.
  */
-function connectToKernel(id, options) {
+function connectToKernel(id, options, ajaxOptions) {
     var kernel = runningKernels.get(id);
     if (kernel) {
         return Promise.resolve(kernel);
@@ -118,7 +133,7 @@ function connectToKernel(id, options) {
     if (options === void 0) {
         return Promise.reject(new Error('Please specify kernel options'));
     }
-    return listRunningKernels(options.baseUrl).then(function (kernelIds) {
+    return listRunningKernels(options.baseUrl, ajaxOptions).then(function (kernelIds) {
         if (!kernelIds.some(function (k) { return k.id === id; })) {
             throw new Error('No running kernel with id: ' + id);
         }
@@ -152,6 +167,7 @@ exports.createKernelMessage = createKernelMessage;
 /**
  * Create a Promise for a Kernel object.
  *
+ * #### Notes
  * Fulfilled when the Kernel is Starting, or rejected if Dead.
  */
 function createKernel(options, id) {
@@ -201,7 +217,7 @@ var Kernel = (function () {
     }
     Object.defineProperty(Kernel.prototype, "statusChanged", {
         /**
-         * The status changed signal for the kernel.
+         * A signal emitted when the kernel status changes.
          */
         get: function () {
             return Kernel.statusChangedSignal.bind(this);
@@ -211,7 +227,7 @@ var Kernel = (function () {
     });
     Object.defineProperty(Kernel.prototype, "unhandledMessage", {
         /**
-         * The unhandled message signal for the kernel.
+         * A signal emitted for unhandled kernel message.
          */
         get: function () {
             return Kernel.unhandledMessageSignal.bind(this);
@@ -221,7 +237,7 @@ var Kernel = (function () {
     });
     Object.defineProperty(Kernel.prototype, "commOpened", {
         /**
-         * The unhandled comm_open message signal for the kernel.
+         * A signal emitted for unhandled comm open message.
          */
         get: function () {
             return Kernel.commOpenedSignal.bind(this);
@@ -232,6 +248,9 @@ var Kernel = (function () {
     Object.defineProperty(Kernel.prototype, "id", {
         /**
          * The id of the server-side kernel.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._id;
@@ -242,6 +261,9 @@ var Kernel = (function () {
     Object.defineProperty(Kernel.prototype, "name", {
         /**
          * The name of the server-side kernel.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._name;
@@ -253,7 +275,8 @@ var Kernel = (function () {
         /**
          * The client username.
          *
-         * Read-only
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._username;
@@ -265,7 +288,8 @@ var Kernel = (function () {
         /**
          * The client unique id.
          *
-         * Read-only
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._clientId;
@@ -276,6 +300,9 @@ var Kernel = (function () {
     Object.defineProperty(Kernel.prototype, "status", {
         /**
          * The current status of the kernel.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._status;
@@ -284,60 +311,101 @@ var Kernel = (function () {
         configurable: true
     });
     /**
-     * Send a message to the kernel.
+     * Send a shell message to the kernel.
      *
-     * The future object will yield the result when available.
+     * #### Notes
+     * Send a message to the kernel's shell channel, yielding a future object
+     * for accepting replies.
+     *
+     * If `expectReply` is given and `true`, the future is disposed when both a
+     * shell reply and an idle status message are received.   If `expectReply`
+     * is not given or is `false`, the future is resolved when an idle status
+     * message is received.
+     * If `disposeOnDone` is not given or is `true`, the Future is disposed at this point.
+     * If `disposeOnDone` is given and `false`, it is up to the caller to dispose of the Future.
+     *
+     * All replies are validated as valid kernel messages.
+     *
+     * If the kernel status is `Dead`, this will throw an error.
      */
-    Kernel.prototype.sendShellMessage = function (msg, expectReply) {
+    Kernel.prototype.sendShellMessage = function (msg, expectReply, disposeOnDone) {
         var _this = this;
         if (expectReply === void 0) { expectReply = false; }
+        if (disposeOnDone === void 0) { disposeOnDone = true; }
         if (this._status === ikernel_1.KernelStatus.Dead) {
             throw Error('Cannot send a message to a closed Kernel');
         }
         this._ws.send(serialize.serialize(msg));
-        var future = new KernelFutureHandler(expectReply, function () {
+        var future = new KernelFutureHandler(function () {
             _this._futures.delete(msg.header.msg_id);
-        });
+        }, expectReply, disposeOnDone);
         this._futures.set(msg.header.msg_id, future);
         return future;
     };
     /**
-     * Interrupt a kernel via API: POST /kernels/{kernel_id}/interrupt
-     */
-    Kernel.prototype.interrupt = function () {
-        return interruptKernel(this, this._baseUrl);
-    };
-    /**
-     * Restart a kernel via API: POST /kernels/{kernel_id}/restart
+     * Interrupt a kernel.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernels).
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
      *
      * It is assumed that the API call does not mutate the kernel id or name.
+     *
+     * The promise will be rejected if the kernel status is `Dead` or if the
+     * request fails or the response is invalid.
      */
-    Kernel.prototype.restart = function () {
+    Kernel.prototype.interrupt = function (ajaxOptions) {
+        return interruptKernel(this, this._baseUrl, ajaxOptions);
+    };
+    /**
+     * Restart a kernel.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernels) and validates the response model.
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
+     *
+     * It is assumed that the API call does not mutate the kernel id or name.
+     *
+     * The promise will be rejected if the kernel status is `Dead` or if the
+     * request fails or the response is invalid.
+     */
+    Kernel.prototype.restart = function (ajaxOptions) {
         if (this._status === ikernel_1.KernelStatus.Dead) {
             return Promise.reject(new Error('Kernel is dead'));
         }
         this._status = ikernel_1.KernelStatus.Restarting;
-        return restartKernel(this, this._baseUrl);
+        return restartKernel(this, this._baseUrl, ajaxOptions);
     };
     /**
-     * Delete a kernel via API: DELETE /kernels/{kernel_id}
+     * Shutdown a kernel.
      *
-     * If the given kernel id corresponds to an Kernel object, that
-     * object is disposed and its websocket connection is cleared.
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/kernels).
      *
-     * Any further calls to `sendMessage` for that Kernel will throw
-     * an exception.
+     * The promise is fulfilled on a valid response and rejected otherwise.
+     *
+     * On a valid response, closes the websocket and disposes of the kernel
+     * object, and fulfills the promise.
+     *
+     * The promise will be rejected if the kernel status is `Dead` or if the
+     * request fails or the response is invalid.
      */
-    Kernel.prototype.shutdown = function () {
+    Kernel.prototype.shutdown = function (ajaxOptions) {
         var _this = this;
-        return shutdownKernel(this, this._baseUrl).then(function () {
+        return shutdownKernel(this, this._baseUrl, ajaxOptions).then(function () {
             _this._ws.close();
         });
     };
     /**
-     * Send a "kernel_info_request" message.
+     * Send a `kernel_info_request` message.
      *
-     * See https://ipython.org/ipython-doc/dev/development/messaging.html#kernel-info
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#kernel-info).
+     *
+     * Fulfills with the `kernel_info_response` content when the shell reply is
+     * received and validated.
      */
     Kernel.prototype.kernelInfo = function () {
         var options = {
@@ -350,9 +418,13 @@ var Kernel = (function () {
         return sendKernelMessage(this, msg);
     };
     /**
-     * Send a "complete_request" message.
+     * Send a `complete_request` message.
      *
-     * See https://ipython.org/ipython-doc/dev/development/messaging.html#completion
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#completion).
+     *
+     * Fulfills with the `complete_reply` content when the shell reply is
+     * received and validated.
      */
     Kernel.prototype.complete = function (contents) {
         var options = {
@@ -365,9 +437,13 @@ var Kernel = (function () {
         return sendKernelMessage(this, msg);
     };
     /**
-     * Send an "inspect_request" message.
+     * Send an `inspect_request` message.
      *
-     * See https://ipython.org/ipython-doc/dev/development/messaging.html#introspection
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#introspection).
+     *
+     * Fulfills with the `inspect_reply` content when the shell reply is
+     * received and validated.
      */
     Kernel.prototype.inspect = function (contents) {
         var options = {
@@ -380,11 +456,21 @@ var Kernel = (function () {
         return sendKernelMessage(this, msg);
     };
     /**
-     * Send an "execute_request" message.
+     * Send an `execute_request` message.
      *
-     * See https://ipython.org/ipython-doc/dev/development/messaging.html#execute
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#execute).
+     *
+     * Future `onReply` is called with the `execute_reply` content when the
+     * shell reply is received and validated.  The future will resolve when
+     * this message is received and the `idle` iopub status is received.
+     * The future will also be disposed at this point unless `disposeOnDone`
+     * is specified and `false`, in which case it is up to the caller to dispose of the future.
+     *
+     * **See also:** [[IExecuteReply]]
      */
-    Kernel.prototype.execute = function (contents) {
+    Kernel.prototype.execute = function (contents, disposeOnDone) {
+        if (disposeOnDone === void 0) { disposeOnDone = true; }
         var options = {
             msgType: 'execute_request',
             channel: 'shell',
@@ -399,12 +485,16 @@ var Kernel = (function () {
         };
         contents = utils.extend(defaults, contents);
         var msg = createKernelMessage(options, contents);
-        return this.sendShellMessage(msg, true);
+        return this.sendShellMessage(msg, true, disposeOnDone);
     };
     /**
-     * Send an "is_complete_request" message.
+     * Send an `is_complete_request` message.
      *
-     * See https://ipython.org/ipython-doc/dev/development/messaging.html#code-completeness
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#code-completeness).
+     *
+     * Fulfills with the `is_complete_response` content when the shell reply is
+     * received and validated.
      */
     Kernel.prototype.isComplete = function (contents) {
         var options = {
@@ -417,8 +507,11 @@ var Kernel = (function () {
         return sendKernelMessage(this, msg);
     };
     /**
-     * Send a 'comm_info_request', and return the contents of the
-     * 'comm_info_reply'.
+     * Send a `comm_info_request` message.
+     *
+     * #### Notes
+     * Fulfills with the `comm_info_reply` content when the shell reply is
+     * received and validated.
      */
     Kernel.prototype.commInfo = function (contents) {
         var options = {
@@ -431,9 +524,10 @@ var Kernel = (function () {
         return sendKernelMessage(this, msg);
     };
     /**
-     * Send an "input_reply" message.
+     * Send an `input_reply` message.
      *
-     * https://ipython.org/ipython-doc/dev/development/messaging.html#messages-on-the-stdin-router-dealer-sockets
+     * #### Notes
+     * See [Messaging in Jupyter](http://jupyter-client.readthedocs.org/en/latest/messaging.html#messages-on-the-stdin-router-dealer-sockets).
      */
     Kernel.prototype.sendInputReply = function (contents) {
         if (this._status === ikernel_1.KernelStatus.Dead) {
@@ -451,6 +545,7 @@ var Kernel = (function () {
     /**
      * Connect to a comm, or create a new one.
      *
+     * #### Notes
      * If a client-side comm already exists, it is returned.
      */
     Kernel.prototype.connectToComm = function (targetName, commId) {
@@ -476,7 +571,7 @@ var Kernel = (function () {
             // trailing 's' in https will become wss for secure web sockets
             wsUrl = (location.protocol.replace('http', 'ws') + "//" + location.host);
         }
-        var partialUrl = utils.urlPathJoin(wsUrl, KERNEL_SERVICE_URL, this._id);
+        var partialUrl = utils.urlPathJoin(wsUrl, KERNEL_SERVICE_URL, utils.urlJoinEncode(this._id));
         console.log('Starting WebSocket:', partialUrl);
         var url = (utils.urlPathJoin(partialUrl, 'channels') +
             '?session_id=' + this._clientId);
@@ -488,10 +583,16 @@ var Kernel = (function () {
         this._ws.onclose = function (evt) { _this._onWSClose(evt); };
         this._ws.onerror = function (evt) { _this._onWSClose(evt); };
     };
+    /**
+     * Handle a websocket open event.
+     */
     Kernel.prototype._onWSOpen = function (evt) {
         // trigger a status response
         this.kernelInfo();
     };
+    /**
+     * Handle a websocket message, validating and routing appropriately.
+     */
     Kernel.prototype._onWSMessage = function (evt) {
         var msg = serialize.deserialize(evt.data);
         var handled = false;
@@ -533,6 +634,9 @@ var Kernel = (function () {
             this.unhandledMessage.emit(msg);
         }
     };
+    /**
+     * Handle a websocket close event.
+     */
     Kernel.prototype._onWSClose = function (evt) {
         this._updateStatus('dead');
     };
@@ -572,7 +676,7 @@ var Kernel = (function () {
         }
     };
     /**
-     * Handle 'comm_open' kernel message.
+     * Handle `comm_open` kernel message.
      */
     Kernel.prototype._handleCommOpen = function (msg) {
         var _this = this;
@@ -682,7 +786,8 @@ var Kernel = (function () {
     /**
      * Send a comm message to the kernel.
      */
-    Kernel.prototype._sendCommMessage = function (payload) {
+    Kernel.prototype._sendCommMessage = function (payload, disposeOnDone) {
+        if (disposeOnDone === void 0) { disposeOnDone = true; }
         var options = {
             msgType: payload.msgType,
             channel: 'shell',
@@ -690,7 +795,7 @@ var Kernel = (function () {
             session: this.clientId
         };
         var msg = createKernelMessage(options, payload.content, payload.metadata, payload.buffers);
-        return this.sendShellMessage(msg);
+        return this.sendShellMessage(msg, false, disposeOnDone);
     };
     /**
      * Unregister a comm instance.
@@ -701,14 +806,20 @@ var Kernel = (function () {
     };
     /**
      * A signal emitted when the kernel status changes.
+     *
+     * **See also:** [[statusChanged]]
      */
     Kernel.statusChangedSignal = new phosphor_signaling_1.Signal();
     /**
      * A signal emitted for unhandled kernel message.
+     *
+     * **See also:** [[unhandledMessage]]
      */
     Kernel.unhandledMessageSignal = new phosphor_signaling_1.Signal();
     /**
      * A signal emitted for unhandled comm open message.
+     *
+     * **See also:** [[commOpened]]
      */
     Kernel.commOpenedSignal = new phosphor_signaling_1.Signal();
     return Kernel;
@@ -718,16 +829,14 @@ var Kernel = (function () {
  */
 var runningKernels = new Map();
 /**
- * Restart a kernel via API: POST /kernels/{kernel_id}/restart
- *
- * It is assumed that the API call does not mutate the kernel id or name.
+ * Restart a kernel.
  */
-function restartKernel(kernel, baseUrl) {
-    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, kernel.id, 'restart');
+function restartKernel(kernel, baseUrl, ajaxOptions) {
+    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, utils.urlJoinEncode(kernel.id, 'restart'));
     return utils.ajaxRequest(url, {
         method: "POST",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 200) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -748,40 +857,34 @@ function restartKernel(kernel, baseUrl) {
     }, onKernelError);
 }
 /**
- * Interrupt a kernel via API: POST /kernels/{kernel_id}/interrupt
+ * Interrupt a kernel.
  */
-function interruptKernel(kernel, baseUrl) {
+function interruptKernel(kernel, baseUrl, ajaxOptions) {
     if (kernel.status === ikernel_1.KernelStatus.Dead) {
         return Promise.reject(new Error('Kernel is dead'));
     }
-    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, kernel.id, 'interrupt');
+    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, utils.urlJoinEncode(kernel.id, 'interrupt'));
     return utils.ajaxRequest(url, {
         method: "POST",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 204) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
     }, onKernelError);
 }
 /**
- * Delete a kernel via API: DELETE /kernels/{kernel_id}
- *
- * If the given kernel id corresponds to an Kernel object, that
- * object is disposed and its websocket connection is cleared.
- *
- * Any further calls to `sendMessage` for that Kernel will throw
- * an exception.
+ * Delete a kernel.
  */
-function shutdownKernel(kernel, baseUrl) {
+function shutdownKernel(kernel, baseUrl, ajaxOptions) {
     if (kernel.status === ikernel_1.KernelStatus.Dead) {
         return Promise.reject(new Error('Kernel is dead'));
     }
-    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, kernel.id);
+    var url = utils.urlPathJoin(baseUrl, KERNEL_SERVICE_URL, utils.urlJoinEncode(kernel.id));
     return utils.ajaxRequest(url, {
         method: "DELETE",
         dataType: "json"
-    }).then(function (success) {
+    }, ajaxOptions).then(function (success) {
         if (success.xhr.status !== 204) {
             throw Error('Invalid Status: ' + success.xhr.status);
         }
@@ -836,22 +939,28 @@ var KernelFutureFlag;
     KernelFutureFlag[KernelFutureFlag["GotReply"] = 1] = "GotReply";
     KernelFutureFlag[KernelFutureFlag["GotIdle"] = 2] = "GotIdle";
     KernelFutureFlag[KernelFutureFlag["IsDone"] = 4] = "IsDone";
+    KernelFutureFlag[KernelFutureFlag["DisposeOnDone"] = 8] = "DisposeOnDone";
 })(KernelFutureFlag || (KernelFutureFlag = {}));
 /**
  * Implementation of a kernel future.
  */
 var KernelFutureHandler = (function (_super) {
     __extends(KernelFutureHandler, _super);
-    function KernelFutureHandler(expectShell, cb) {
+    /**
+     * Construct a new KernelFutureHandler.
+     */
+    function KernelFutureHandler(cb, expectShell, disposeOnDone) {
         _super.call(this, cb);
         this._status = 0;
         this._stdin = null;
         this._iopub = null;
         this._reply = null;
         this._done = null;
+        this._disposeOnDone = true;
         if (!expectShell) {
             this._setFlag(KernelFutureFlag.GotReply);
         }
+        this._disposeOnDone = disposeOnDone;
     }
     Object.defineProperty(KernelFutureHandler.prototype, "isDone", {
         /**
@@ -988,7 +1097,9 @@ var KernelFutureHandler = (function (_super) {
         if (done)
             done(msg);
         this._done = null;
-        this.dispose();
+        if (this._disposeOnDone) {
+            this.dispose();
+        }
     };
     /**
      * Test whether the given future flag is set.
@@ -1031,9 +1142,10 @@ var Comm = (function (_super) {
     }
     Object.defineProperty(Comm.prototype, "commId", {
         /**
-         * Get the uuid for the comm channel.
+         * The unique id for the comm channel.
          *
-         * Read-only
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._id;
@@ -1043,9 +1155,10 @@ var Comm = (function (_super) {
     });
     Object.defineProperty(Comm.prototype, "targetName", {
         /**
-         * Get the target name for the comm channel.
+         * The target name for the comm channel.
          *
-         * Read-only
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._target;
@@ -1055,13 +1168,25 @@ var Comm = (function (_super) {
     });
     Object.defineProperty(Comm.prototype, "onClose", {
         /**
-         * Get the onClose handler.
+         * Get the callback for a comm close event.
+         *
+         * #### Notes
+         * This is called when the comm is closed from either the server or
+         * client.
+         *
+         * **See also:** [[ICommClose]], [[close]]
          */
         get: function () {
             return this._onClose;
         },
         /**
-         * Set the onClose handler.
+         * Set the callback for a comm close event.
+         *
+         * #### Notes
+         * This is called when the comm is closed from either the server or
+         * client.
+         *
+         * **See also:** [[ICommClose]], [[close]]
          */
         set: function (cb) {
             this._onClose = cb;
@@ -1071,13 +1196,17 @@ var Comm = (function (_super) {
     });
     Object.defineProperty(Comm.prototype, "onMsg", {
         /**
-         * Get the onMsg handler.
+         * Get the callback for a comm message received event.
+         *
+         * **See also:** [[ICommMsg]]
          */
         get: function () {
             return this._onMsg;
         },
         /**
-         * Set the onMsg handler.
+         * Set the callback for a comm message received event.
+         *
+         * **See also:** [[ICommMsg]]
          */
         set: function (cb) {
             this._onMsg = cb;
@@ -1086,7 +1215,12 @@ var Comm = (function (_super) {
         configurable: true
     });
     /**
-     * Initialize a comm with optional data.
+     * Open a comm with optional data and metadata.
+     *
+     * #### Notes
+     * This sends a `comm_open` message to the server.
+     *
+     * **See also:** [[ICommOpen]]
      */
     Comm.prototype.open = function (data, metadata) {
         var content = {
@@ -1100,11 +1234,17 @@ var Comm = (function (_super) {
         return this._msgFunc(payload);
     };
     /**
-     * Send a comm message to the kernel.
+     * Send a `comm_msg` message to the kernel.
+     *
+     * #### Notes
+     * This is a no-op if the comm has been closed.
+     *
+     * **See also:** [[ICommMsg]]
      */
-    Comm.prototype.send = function (data, metadata, buffers) {
+    Comm.prototype.send = function (data, metadata, buffers, disposeOnDone) {
         if (metadata === void 0) { metadata = {}; }
         if (buffers === void 0) { buffers = []; }
+        if (disposeOnDone === void 0) { disposeOnDone = true; }
         if (this.isDisposed) {
             throw Error('Comm is closed');
         }
@@ -1115,10 +1255,18 @@ var Comm = (function (_super) {
             metadata: metadata,
             buffers: buffers,
         };
-        return this._msgFunc(payload);
+        return this._msgFunc(payload, disposeOnDone);
     };
     /**
      * Close the comm.
+     *
+     * #### Notes
+     * This will send a `comm_close` message to the kernel, and call the
+     * `onClose` callback if set.
+     *
+     * This is a no-op if the comm is already closed.
+     *
+     * **See also:** [[ICommClose]], [[onClose]]
      */
     Comm.prototype.close = function (data, metadata) {
         if (this.isDisposed) {
@@ -1139,7 +1287,7 @@ var Comm = (function (_super) {
         return future;
     };
     /**
-     * Clear internal state when disposed.
+     * Dispose of the resources held by the comm.
      */
     Comm.prototype.dispose = function () {
         this._onClose = null;

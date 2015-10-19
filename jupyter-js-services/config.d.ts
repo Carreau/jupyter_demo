@@ -1,39 +1,31 @@
+import { IAjaxOptions } from './utils';
 /**
- * Configurable data section.
+ * A Configurable data section.
  */
-export declare class ConfigSection {
+export interface IConfigSection {
     /**
-     * Create a config section.
-     */
-    constructor(sectionName: string, baseUrl: string);
-    /**
-     * Get the data for this section.
+     * The data for this section.
+     *
+     * #### Notes
+     * This is a read-only property.
      */
     data: any;
     /**
-     * Promose fullfilled when the config section is first loaded.
+     * Modify the stored config values.
+     *
+     * #### Notes
+     * Updates the local data immediately, sends the change to the server,
+     * and updates the local data with the response, and fullfils the promise
+     * with that data.
      */
-    onLoaded: Promise<any>;
-    /**
-     * Retrieve the data for this section.
-     */
-    load(): Promise<any>;
-    /**
-     * Modify the config values stored. Update the local data immediately,
-     * send the change to the server, and use the updated data from the server
-     * when the reply comes.
-     */
-    update(newdata: any): Promise<any>;
-    /**
-     * Handle a finished load, fulfilling the onLoaded promise on the first call.
-     */
-    private _loadDone();
-    private _url;
-    private _data;
-    private _loaded;
-    private _oneLoadFinished;
-    private _finishFirstLoad;
+    update(newdata: any, ajaxOptions?: IAjaxOptions): Promise<any>;
 }
+/**
+ * Create a config section.
+ *
+ * @returns A Promise that is fulfilled with the config section is loaded.
+ */
+export declare function getConfigSection(sectionName: string, baseUrl: string, ajaxOptions?: IAjaxOptions): Promise<IConfigSection>;
 /**
  * Configurable object with defaults.
  */
@@ -41,25 +33,27 @@ export declare class ConfigWithDefaults {
     /**
      * Create a new config with defaults.
      */
-    constructor(section: ConfigSection, defaults: any, classname?: string);
+    constructor(section: IConfigSection, defaults: any, classname?: string);
     /**
-     * Wait for config to have loaded, then get a value or the default.
+     * Get data from the config section or fall back to defaults.
+     */
+    get(key: string): any;
+    /**
+     * Set a config value.
      *
-     * Note: section.load() must be called somewhere else.
-     */
-    get(key: string): Promise<any>;
-    /**
-     * Return a config value. If config is not yet loaded, return the default
-     * instead of waiting for it to load.
-     */
-    getSync(key: string): any;
-    /**
-     * Set a config value. Send the update to the server, and change our
-     * local copy of the data immediately.
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/config).
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
+     *
+     * Sends the update to the server, and changes our local copy of the data
+     * immediately.
      */
     set(key: string, value: any): Promise<any>;
     /**
      * Get data from the Section with our classname, if available.
+     *
+     * #### Notes
      * If we have no classname, get all of the data in the Section
      */
     private _classData();

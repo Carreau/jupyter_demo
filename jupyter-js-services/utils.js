@@ -4,7 +4,7 @@
 /**
  * Copy the contents of one object to another, recursively.
  *
- * http://stackoverflow.com/questions/12317003/something-like-jquery-extend-but-standalone
+ * From [stackoverflow](http://stackoverflow.com/a/12317051).
  */
 function extend(target, source) {
     target = target || {};
@@ -33,7 +33,7 @@ function uuid() {
 }
 exports.uuid = uuid;
 /**
- * Join a sequence of url components with '/'.
+ * Join a sequence of url components with `'/'`.
  */
 function urlPathJoin() {
     var paths = [];
@@ -60,16 +60,16 @@ function urlPathJoin() {
 }
 exports.urlPathJoin = urlPathJoin;
 /**
- * Encode just the components of a multi-segment uri,
- * leaving '/' separators.
+ * Encode just the components of a multi-segment uri.
+ *
+ * Preserves the `'/'` separators.
  */
 function encodeURIComponents(uri) {
     return uri.split('/').map(encodeURIComponent).join('/');
 }
 exports.encodeURIComponents = encodeURIComponents;
 /**
- * Join a sequence of url components with '/',
- * encoding each component with encodeURIComponent.
+ * Encode and join a sequence of url components with `'/'`.
  */
 function urlJoinEncode() {
     var args = [];
@@ -82,7 +82,7 @@ exports.urlJoinEncode = urlJoinEncode;
 /**
  * Return a serialized object string suitable for a query.
  *
- * http://stackoverflow.com/a/30707423
+ * From [stackoverflow](http://stackoverflow.com/a/30707423).
  */
 function jsonToQueryString(json) {
     return '?' + Object.keys(json).map(function (key) {
@@ -93,24 +93,39 @@ exports.jsonToQueryString = jsonToQueryString;
 /**
  * Asynchronous XMLHTTPRequest handler.
  *
- * http://www.html5rocks.com/en/tutorials/es6/promises/#toc-promisifying-xmlhttprequest
+ * Based on this [example](http://www.html5rocks.com/en/tutorials/es6/promises/#toc-promisifying-xmlhttprequest).
  */
-function ajaxRequest(url, settings) {
+function ajaxRequest(url, settings, options) {
+    options = options || {};
     return new Promise(function (resolve, reject) {
         var req = new XMLHttpRequest();
-        req.open(settings.method, url);
+        req.open(settings.method, url, options.async, options.user, options.password);
         if (settings.contentType) {
             req.setRequestHeader('Content-Type', settings.contentType);
         }
+        if (options.timeout !== void 0)
+            req.timeout = options.timeout;
+        if (options.withCredentials !== void 0) {
+            req.withCredentials = options.withCredentials;
+        }
+        if (options.requestHeaders !== void 0) {
+            for (var prop in options.requestHeaders) {
+                req.setRequestHeader(prop, options.requestHeaders[prop]);
+            }
+        }
         req.onload = function () {
-            var response = req.response;
-            if (settings.dataType === 'json' && req.response) {
-                response = JSON.parse(req.response);
+            var response = req.responseText;
+            if (settings.dataType === 'json' && response) {
+                response = JSON.parse(response);
             }
             resolve({ data: response, statusText: req.statusText, xhr: req });
         };
         req.onerror = function (err) {
             reject({ xhr: req, statusText: req.statusText, error: err });
+        };
+        req.ontimeout = function () {
+            reject({ xhr: req, statusText: req.statusText,
+                error: new Error('Operation Timed Out') });
         };
         if (settings.data) {
             req.send(settings.data);

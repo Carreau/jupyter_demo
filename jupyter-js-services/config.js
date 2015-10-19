@@ -6,27 +6,33 @@ var utils = require('./utils');
  */
 var SERVICE_CONFIG_URL = 'api/config';
 /**
- * Configurable data section.
+ * Create a config section.
+ *
+ * @returns A Promise that is fulfilled with the config section is loaded.
+ */
+function getConfigSection(sectionName, baseUrl, ajaxOptions) {
+    var section = new ConfigSection(sectionName, baseUrl);
+    return section.load(ajaxOptions);
+}
+exports.getConfigSection = getConfigSection;
+/**
+ * Implementation of the Configurable data section.
  */
 var ConfigSection = (function () {
     /**
      * Create a config section.
      */
     function ConfigSection(sectionName, baseUrl) {
-        var _this = this;
         this._url = "unknown";
         this._data = {};
-        this._loaded = null;
-        this._oneLoadFinished = false;
-        this._finishFirstLoad = null;
-        this._url = utils.urlJoinEncode(baseUrl, SERVICE_CONFIG_URL, sectionName);
-        this._loaded = new Promise(function (resolve, reject) {
-            _this._finishFirstLoad = resolve;
-        });
+        this._url = utils.urlPathJoin(baseUrl, SERVICE_CONFIG_URL, utils.urlJoinEncode(sectionName));
     }
     Object.defineProperty(ConfigSection.prototype, "data", {
         /**
          * Get the data for this section.
+         *
+         * #### Notes
+         * This is a read-only property.
          */
         get: function () {
             return this._data;
@@ -34,39 +40,40 @@ var ConfigSection = (function () {
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(ConfigSection.prototype, "onLoaded", {
-        /**
-         * Promose fullfilled when the config section is first loaded.
-         */
-        get: function () {
-            return this._loaded;
-        },
-        enumerable: true,
-        configurable: true
-    });
     /**
-     * Retrieve the data for this section.
+     * Load the initial data for this section.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/config).
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
      */
-    ConfigSection.prototype.load = function () {
+    ConfigSection.prototype.load = function (ajaxOptions) {
         var _this = this;
         return utils.ajaxRequest(this._url, {
             method: "GET",
             dataType: "json",
-        }).then(function (success) {
+        }, ajaxOptions).then(function (success) {
             if (success.xhr.status !== 200) {
                 throw Error('Invalid Status: ' + success.xhr.status);
             }
             _this._data = success.data;
-            _this._loadDone();
-            return _this._data;
+            return _this;
         });
     };
     /**
-     * Modify the config values stored. Update the local data immediately,
-     * send the change to the server, and use the updated data from the server
-     * when the reply comes.
+     * Modify the stored config values.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/config).
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
+     *
+     * Updates the local data immediately, sends the change to the server,
+     * and updates the local data with the response, and fullfils the promise
+     * with that data.
      */
-    ConfigSection.prototype.update = function (newdata) {
+    ConfigSection.prototype.update = function (newdata, ajaxOptions) {
         var _this = this;
         this._data = utils.extend(this._data, newdata);
         return utils.ajaxRequest(this._url, {
@@ -74,27 +81,16 @@ var ConfigSection = (function () {
             data: JSON.stringify(newdata),
             dataType: "json",
             contentType: 'application/json',
-        }).then(function (success) {
+        }, ajaxOptions).then(function (success) {
             if (success.xhr.status !== 200) {
                 throw Error('Invalid Status: ' + success.xhr.status);
             }
             _this._data = success.data;
-            _this._loadDone();
             return _this._data;
         });
     };
-    /**
-     * Handle a finished load, fulfilling the onLoaded promise on the first call.
-     */
-    ConfigSection.prototype._loadDone = function () {
-        if (!this._oneLoadFinished) {
-            this._oneLoadFinished = true;
-            this._finishFirstLoad(this._data);
-        }
-    };
     return ConfigSection;
 })();
-exports.ConfigSection = ConfigSection;
 /**
  * Configurable object with defaults.
  */
@@ -111,27 +107,21 @@ var ConfigWithDefaults = (function () {
         this._className = classname;
     }
     /**
-     * Wait for config to have loaded, then get a value or the default.
-     *
-     * Note: section.load() must be called somewhere else.
+     * Get data from the config section or fall back to defaults.
      */
     ConfigWithDefaults.prototype.get = function (key) {
-        var _this = this;
-        var that = this;
-        return this._section.onLoaded.then(function () {
-            return _this._classData()[key] || _this._defaults[key];
-        });
-    };
-    /**
-     * Return a config value. If config is not yet loaded, return the default
-     * instead of waiting for it to load.
-     */
-    ConfigWithDefaults.prototype.getSync = function (key) {
         return this._classData()[key] || this._defaults[key];
     };
     /**
-     * Set a config value. Send the update to the server, and change our
-     * local copy of the data immediately.
+     * Set a config value.
+     *
+     * #### Notes
+     * Uses the [Jupyter Notebook API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyter-js-services/master/rest_api.yaml#!/config).
+     *
+     * The promise is fulfilled on a valid response and rejected otherwise.
+     *
+     * Sends the update to the server, and changes our local copy of the data
+     * immediately.
      */
     ConfigWithDefaults.prototype.set = function (key, value) {
         var d = {};
@@ -147,6 +137,8 @@ var ConfigWithDefaults = (function () {
     };
     /**
      * Get data from the Section with our classname, if available.
+     *
+     * #### Notes
      * If we have no classname, get all of the data in the Section
      */
     ConfigWithDefaults.prototype._classData = function () {

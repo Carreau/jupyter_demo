@@ -1,3 +1,4 @@
+import { ICheckpointModel, IContentsModel } from './contents';
 import { IKernelId, IKernelMessage, IKernelSpecId } from './ikernel';
 import { INotebookId, ISessionId } from './isession';
 /**
@@ -5,22 +6,30 @@ import { INotebookId, ISessionId } from './isession';
  */
 export declare function validateCommMessage(msg: IKernelMessage): boolean;
 /**
- * Validate an object as being of IKernelMessage type.
+ * Validate an `IKernelMessage` object.
  */
 export declare function validateKernelMessage(msg: IKernelMessage): void;
 /**
- * Validate an object as being of IKernelID type
+ * Validate an `KernelId` object.
  */
 export declare function validateKernelId(info: IKernelId): void;
 /**
- * Validate an object as being of ISessionId type.
+ * Validate an `ISessionId` object.
  */
 export declare function validateSessionId(info: ISessionId): void;
 /**
- * Validate an object as being of INotebookId type.
+ * Validate an `INotebookId` object.
  */
 export declare function validateNotebookId(model: INotebookId): void;
 /**
- * Validate an object as being of IKernelSpecID type.
+ * Validate an `IKernelSpecID` object.
  */
 export declare function validateKernelSpec(info: IKernelSpecId): void;
+/**
+ * Validate an `IContentsModel` object.
+ */
+export declare function validateContentsModel(model: IContentsModel): void;
+/**
+ * Validate an `ICheckpointModel` object.
+ */
+export declare function validateCheckpointModel(model: ICheckpointModel): void;
