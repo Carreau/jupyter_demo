@@ -7,6 +7,8 @@
 |----------------------------------------------------------------------------*/
 'use-strict';
 
+declare var window:any;
+
 import * as arrays
   from 'phosphor-arrays';
 
@@ -188,7 +190,7 @@ class CodeMirrorWidget extends Widget {
     } else {
       this._editor.setOption('mode', 'text');
     }
-    doc.setValue(contents);
+    doc.setValue(contents.text);
   }
 
   protected onAfterAttach(msg: Message): void {
@@ -261,10 +263,13 @@ class FileBrowser extends Widget {
          this.listDir();
       } else {
         var path = this._currentDir + (<HTMLElement>event.target).textContent;
+        console.warn("I'm going to get", path)
         this._contents.get(path, { type: "file" }).then(msg => {
+          debugger;
+          window.msg  = msg;
           var onClick = this._onClick;
           if (onClick){
-              onClick(<any>msg.path, <any>msg.content);
+              onClick(<any>path, <any>msg);
             }
         });
       }
@@ -812,8 +817,10 @@ function main(): void {
   }
 
   listing.onClick = (path, contents) => {
+    console.log("here I shoudl get the model, not content is not only content");
+    debugger;
     var cm = dock.newEditor(true);
-    cm.loadFile(path, contents);
+    cm.loadFile(path, (<any>contents).root.get('realtimestring'));
     var parts = path.split('/');
     var name = parts[parts.length - 1];
     DockPanel.getTab(cm).text = name;

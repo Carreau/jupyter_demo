@@ -274,6 +274,8 @@ export var getContents = function(resource, already_picked:boolean, opt_num_trie
         var model = doc.getModel();
         var root = model.getRoot();
 
+        // ** This is if we have a notebook ***
+        //
         var metadata = root.get('metadata')
         if ( metadata === null ){
           console.info('[driveutils.ts] no metadata, populating with default')
@@ -288,6 +290,14 @@ export var getContents = function(resource, already_picked:boolean, opt_num_trie
         if (root.get('cells') === null) {
             root.set('cells', model.createList())
         }
+        
+        var _rn = 'realtimestring';
+        var rts = root.get(_rn);
+        if(rts === null){
+            console.info('[driveutils] creating real time string');
+            root.set(_rn, model.createString('this is my default string value'));
+        }
+
         console.log("[driveutils] will resolve _h to thing")
         //return _h.resolve(new RTNotebook(root, model, data))
         return _h.resolve({root:root, model:model, data:data})

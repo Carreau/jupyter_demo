@@ -263,11 +263,13 @@ export class GoogleDriveContents  {
             return driveutils.getContents(resource, false);
         });
 
+
         return Promise.all([metadata_prm, contents_prm]).then(function(values) {
             var metadata = values[0];
             var contents = values[1];
-            var model = files_resource_to_contents_model(path, metadata, contents);
-            return model;
+            return contents;
+            //var model = files_resource_to_contents_model(path, metadata, contents);
+            //return model;
         });
     }
 
