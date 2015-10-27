@@ -60,6 +60,21 @@ function urlPathJoin() {
 }
 exports.urlPathJoin = urlPathJoin;
 /**
+ * Like os.path.split for URLs.
+ * Always returns two strings, the directory path and the base filename
+ */
+function urlPathSplit(path) {
+    var idx = path.lastIndexOf('/');
+    if (idx === -1) {
+        return ['', path];
+    }
+    else {
+        return [path.slice(0, idx), path.slice(idx + 1)];
+    }
+}
+exports.urlPathSplit = urlPathSplit;
+;
+/**
  * Encode just the components of a multi-segment uri.
  *
  * Preserves the `'/'` separators.
@@ -136,6 +151,60 @@ function ajaxRequest(url, settings, options) {
     });
 }
 exports.ajaxRequest = ajaxRequest;
+var XHR_ERROR = 'XhrError';
+var ajax_error_msg = function (jqXHR) {
+    /**
+     * Return a JSON error message if there is one,
+     * otherwise the basic HTTP status text.
+     */
+    if (jqXHR.responseJSON && jqXHR.responseJSON.traceback) {
+        return jqXHR.responseJSON.traceback;
+    }
+    else if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+        return jqXHR.responseJSON.message;
+    }
+    else {
+        return jqXHR.statusText;
+    }
+};
+exports.log_ajax_error = function (jqXHR, status, error) {
+    /**
+     * log ajax failures with informative messages
+     */
+    var msg = "API request failed (" + jqXHR.status + "): ";
+    console.log(jqXHR);
+    msg += ajax_error_msg(jqXHR);
+    console.log(msg);
+};
+/**
+ * Wraps an AJAX error as an Error object.
+ */
+exports.wrap_ajax_error = function (jqXHR, status, error) {
+    var wrapped_error = (new Error(ajax_error_msg(jqXHR)));
+    wrapped_error.name = XHR_ERROR;
+    // provide xhr response
+    wrapped_error.xhr = jqXHR;
+    wrapped_error.xhr_status = status;
+    wrapped_error.xhr_error = error;
+    return wrapped_error;
+};
+/**
+ * Like $.ajax, but returning an ES6 promise. success and error settings
+ * will be ignored.
+ */
+exports.promising_ajax = function (url, settings) {
+    settings = settings || {};
+    return new Promise(function (resolve, reject) {
+        settings.success = function (data, status, jqXHR) {
+            resolve(data);
+        };
+        settings.error = function (jqXHR, status, error) {
+            exports.log_ajax_error(jqXHR, status, error);
+            reject(exports.wrap_ajax_error(jqXHR, status, error));
+        };
+        return ajaxRequest(url, settings);
+    });
+};
 /**
  * A Promise that can be resolved or rejected by another object.
  */

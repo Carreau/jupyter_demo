@@ -13,6 +13,11 @@ export declare function uuid(): string;
  */
 export declare function urlPathJoin(...paths: string[]): string;
 /**
+ * Like os.path.split for URLs.
+ * Always returns two strings, the directory path and the base filename
+ */
+export declare function urlPathSplit(path: string): string[];
+/**
  * Encode just the components of a multi-segment uri.
  *
  * Preserves the `'/'` separators.
@@ -72,6 +77,16 @@ export interface IAjaxError {
  * Based on this [example](http://www.html5rocks.com/en/tutorials/es6/promises/#toc-promisifying-xmlhttprequest).
  */
 export declare function ajaxRequest(url: string, settings: IAjaxSettings, options?: IAjaxOptions): Promise<any>;
+export declare var log_ajax_error: (jqXHR: any, status: any, error: any) => void;
+/**
+ * Wraps an AJAX error as an Error object.
+ */
+export declare var wrap_ajax_error: (jqXHR: any, status: any, error: any) => any;
+/**
+ * Like $.ajax, but returning an ES6 promise. success and error settings
+ * will be ignored.
+ */
+export declare var promising_ajax: (url: string, settings: any) => Promise<{}>;
 /**
  * A Promise that can be resolved or rejected by another object.
  */

@@ -10,4 +10,5 @@ __export(require('./ikernel'));
 __export(require('./isession'));
 __export(require('./kernel'));
 __export(require('./session'));
+__export(require('./drivecontents'));
 //# sourceMappingURL=index.js.map
