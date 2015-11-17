@@ -43,8 +43,8 @@ import {
 } from 'term.js';
 
 import {
-  startNewKernel, Contents
-} from '../jupyter-js-services/index';
+  startNewKernel, Contents, GoogleDriveContents
+} from 'jupyter-js-services';
 
 import {
   ActionHandler
@@ -221,7 +221,7 @@ class FileBrowser extends Widget {
   constructor(baseUrl, currentDir) {
     super();
     this.addClass('FileBrowser');
-    this._contents = new Contents(baseUrl);
+    this._contents = new GoogleDriveContents(baseUrl);
     document.addEventListener('mousedown', this, true);
     this._currentDir = currentDir;
   }
@@ -308,7 +308,7 @@ class FileBrowser extends Widget {
 
   private _currentDir = '';
   private _onClick: (name: string, contents: string) => void = null;
-  private _contents: Contents = null;
+  private _contents: GoogleDriveContents = null;
 }
 
 

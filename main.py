@@ -16,9 +16,12 @@ class MainPageHandler(tornado.web.RequestHandler):
         return self.render("index.html", static=self.static_url)
 
 
+PORT = 8890
+
+
 def main(argv):
 
-    url = "http://localhost:8765"
+    url = "http://localhost:{}".format(PORT)
 
     handlers = [
         (r"/", MainPageHandler),
@@ -49,11 +52,11 @@ def main(argv):
     app = tornado.web.Application(handlers, static_path='build',
                                   template_path='.')
 
-    app.listen(8765, 'localhost')
     loop = tornado.ioloop.IOLoop.instance()
-    print('Browse to http://localhost:8765')
-    #loop.add_callback(webbrowser.open, url)
     try:
+        app.listen(PORT, 'localhost')
+        print('Browse to http://localhost:{}'.format(PORT))
+    #loop.add_callback(webbrowser.open, url)
         loop.start()
     except KeyboardInterrupt:
         print(" Shutting down on SIGINT")
