@@ -5,6 +5,7 @@ The full license is in the file LICENSE, distributed with this software.
 """
 import subprocess
 import sys
+import webbrowser
 
 import tornado.httpserver
 import webbrowser
@@ -65,7 +66,7 @@ def main(argv):
     loop = tornado.ioloop.IOLoop.instance()
     try:
         http_server.listen(PORT, 'localhost')
-        print('Browse to https://localhost:{}'.format(PORT))
+        webbrowser.open('https://localhost:{}'.format(PORT))
     #loop.add_callback(webbrowser.open, url)
         loop.start()
     except KeyboardInterrupt:
@@ -76,18 +77,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
-
-
-
-import tornado.web
-
-class getToken(tornado.web.RequestHandler):
-    def get(self):
-        self.write("hello")
-
-application = tornado.web.Application([
-    (r'/', getToken),
-])
-
-
 
