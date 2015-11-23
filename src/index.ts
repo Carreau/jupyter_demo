@@ -35,7 +35,7 @@ import {
 } from 'phosphor-tabs';
 
 import {
-  ResizeMessage, Widget, attachWidget
+  ResizeMessage, Widget
 } from 'phosphor-widget';
 
 import {
@@ -76,7 +76,7 @@ class TerminalWidget extends Widget {
 
   static createTerminal(config?: ITerminalConfig) : TerminalWidget {
     TerminalWidget.nterms += 1;
-    var wsUrl = `ws://${ADDRESS}/terminals/websocket/${TerminalWidget.nterms}`;
+    var wsUrl = `wss://${ADDRESS}/terminals/websocket/${TerminalWidget.nterms}`;
     var term = new TerminalWidget(wsUrl, config);
     return term;
   }
@@ -399,8 +399,8 @@ var ADDRESS = 'localhost:8888';
 
 function newNotebook(): Notebook {
   var kernelOptions = {
-    baseUrl: `http://${ADDRESS}`,
-    wsUrl: `ws://${ADDRESS}`,
+    baseUrl: `https://${ADDRESS}`,
+    wsUrl: `wss://${ADDRESS}`,
     name: 'python'
   }
   var notebook = new Notebook();
@@ -837,9 +837,9 @@ function main(): void {
   DockPanel.getTab(cm).text = 'Sample';
 
   var menuBar = createMenuBar(dock);
-  attachWidget(menuBar, document.body);
+  Widget.attach(menuBar, document.body);
 
-  attachWidget(panel, document.body);
+  Widget.attach(panel, document.body);
   panel.update();
   window.onresize = () => panel.update();
 }

@@ -6,6 +6,7 @@ The full license is in the file LICENSE, distributed with this software.
 import subprocess
 import sys
 
+import tornado.httpserver
 import webbrowser
 import tornado.web
 
@@ -18,10 +19,18 @@ class MainPageHandler(tornado.web.RequestHandler):
 
 PORT = 8890
 
+import os.path
+
+
+ssl_options = {
+    "certfile": os.path.expanduser("~/.ssh/mycert.crt"),
+    "keyfile": os.path.expanduser("~/.ssh/mycert.pem"),
+}
+
 
 def main(argv):
 
-    url = "http://localhost:{}".format(PORT)
+    url = "https://localhost:{}".format(PORT)
 
     handlers = [
         (r"/", MainPageHandler),
@@ -42,7 +51,7 @@ def main(argv):
         if not line:
             continue
         print(line)
-        if 'The IPython Notebook is running at: http://localhost:8888/':
+        if 'The IPython Notebook is running at: https://localhost:8888/':
             break
         if 'Control-C' in line:
             raise ValueError(
@@ -52,10 +61,11 @@ def main(argv):
     app = tornado.web.Application(handlers, static_path='build',
                                   template_path='.')
 
+    http_server = tornado.httpserver.HTTPServer(app, ssl_options=ssl_options)
     loop = tornado.ioloop.IOLoop.instance()
     try:
-        app.listen(PORT, 'localhost')
-        print('Browse to http://localhost:{}'.format(PORT))
+        http_server.listen(PORT, 'localhost')
+        print('Browse to https://localhost:{}'.format(PORT))
     #loop.add_callback(webbrowser.open, url)
         loop.start()
     except KeyboardInterrupt:
@@ -66,3 +76,18 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
+
+
+
+import tornado.web
+
+class getToken(tornado.web.RequestHandler):
+    def get(self):
+        self.write("hello")
+
+application = tornado.web.Application([
+    (r'/', getToken),
+])
+
+
+
