@@ -11,6 +11,10 @@ import tornado.httpserver
 import webbrowser
 import tornado.web
 
+from traitlets.config.loader import JSONFileConfigLoader, ConfigFileNotFound, PyFileConfigLoader
+from jupyter_core.paths import jupyter_config_dir
+
+
 
 class MainPageHandler(tornado.web.RequestHandler):
 
@@ -23,9 +27,15 @@ PORT = 8890
 import os.path
 
 
+pyloader = PyFileConfigLoader('jupyter_notebook_config.py', jupyter_config_dir())
+jsloader = JSONFileConfigLoader('jupyter_notebook_config.json', jupyter_config_dir())
+config = pyloader.load_config()
+config.update(jsloader.load_config())
+
+
 ssl_options = {
-    "certfile": os.path.expanduser("~/.ssh/mycert.crt"),
-    "keyfile": os.path.expanduser("~/.ssh/mycert.pem"),
+    "certfile": os.path.expanduser(config.NotebookApp.certfile),
+    "keyfile": os.path.expanduser(config.NotebookApp.keyfile),
 }
 
 
