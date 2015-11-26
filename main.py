@@ -30,8 +30,14 @@ import os.path
 pyloader = PyFileConfigLoader('jupyter_notebook_config.py', jupyter_config_dir())
 jsloader = JSONFileConfigLoader('jupyter_notebook_config.json', jupyter_config_dir())
 config = pyloader.load_config()
-config.update(jsloader.load_config())
+try:
+    config.update(jsloader.load_config())
+except:
+    pass
 
+
+if type(config.NotebookApp.certfile) != type(''):
+    sys.exit('No certificate found either in jupyter_noteboko_config.py or jupyter_notebook_config.json config file, cannot start notebook server with SSl');
 
 ssl_options = {
     "certfile": os.path.expanduser(config.NotebookApp.certfile),
